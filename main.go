@@ -4,6 +4,7 @@ import (
 	"context"
 	"event/handler"
 	"event/repo"
+	"event/utils"
 	"log"
 	"net/http"
 
@@ -18,7 +19,8 @@ func main() {
 	}
 
 	server := repo.New(db)
-	eventHandler := handler.New(server)
+	utils := utils.New()
+	eventHandler := handler.New(server, utils)
 
 	http.HandleFunc("/create_event", eventHandler.CreateEventHandler)
 	http.HandleFunc("/events_for_day", eventHandler.GetEventsForDayHandler)

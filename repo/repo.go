@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -70,7 +71,7 @@ func (s *Server) GetEventsForWeek(ctx context.Context, userID int, startDate tim
 	var results []Result
 	rows, err := s.db.Query(ctx, "select user_id, date from events where user_id=$1 and date between $2 and $3", userID, startDate, endDate)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			fmt.Println("cant find events for this day", err)
 			return nil, err
 		}
@@ -92,9 +93,9 @@ func (s *Server) GetEventsForWeek(ctx context.Context, userID int, startDate tim
 	return results, nil
 }
 
-func (s *Server) UpdateEvent(ctx context.Context, id int, date time.Time, title string) (Result, error) {
+func (s *Server) UpdateEvent(ctx context.Context, id int, userId int, title string) (Result, error) {
 	var result Result
-	err := s.db.QueryRow(ctx, "update events set title=$3 where id=$2 and date=$1", date, id, title).Scan(&result.Date, &result.UserID, &result.Title)
+	err := s.db.QueryRow(ctx, "update events set title=$1 where user_id=$2 and id=$3", title, userId, id).Scan(&result.Date, &result.UserID, &result.Title)
 	if err != nil {
 		fmt.Println("Error query for updating event", err)
 		return Result{}, err
