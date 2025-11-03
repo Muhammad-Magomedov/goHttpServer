@@ -4,167 +4,169 @@ import (
 	"event/repo"
 	"event/utils"
 	"net/http"
+	"strconv"
+	"time"
 )
+
+const dateFormat = "2006-01-02"
 
 type Handler struct {
 	server *repo.Server
-	utils  utils.Utils
 }
 
-func New(server *repo.Server, utils utils.Utils) *Handler {
+func New(server *repo.Server) *Handler {
 	return &Handler{
 		server: server,
-		utils:  utils,
 	}
 }
 
 func (h *Handler) CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		h.utils.WriteError(w, err, http.StatusBadRequest)
+		utils.WriteError(w, err, http.StatusBadRequest)
 		return
 	}
 
-	userId, err := h.utils.ParseUserID(r.FormValue("user_id"))
+	userID, err := strconv.Atoi(r.FormValue("user_id"))
 	if err != nil {
-		h.utils.WriteError(w, err, http.StatusBadRequest)
+		utils.WriteError(w, err, http.StatusBadRequest)
 		return
 	}
 
-	date, err := h.utils.ParseDate(r.FormValue("date"))
+	date, err := time.Parse(dateFormat, r.FormValue("date"))
 	if err != nil {
-		h.utils.WriteError(w, err, http.StatusBadRequest)
+		utils.WriteError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	title := r.FormValue("title")
 
-	if err := h.server.CreateEvent(r.Context(), userId, date, title); err != nil {
-		h.utils.WriteError(w, err, http.StatusInternalServerError)
+	event := repo.CreateEvent{
+		UserID: userID,
+		Date:   date,
+		Title:  title,
+	}
+
+	if err := h.server.CreateEvent(r.Context(), event); err != nil {
+		utils.WriteError(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	h.utils.WriteJSON(w, "Событие добавлено")
+	utils.WriteJSON(w, "Событие добавлено")
 }
 
 func (h *Handler) GetEventsForDayHandler(w http.ResponseWriter, r *http.Request) {
-	userId, err := h.utils.ParseUserID(r.URL.Query().Get("user_id"))
+	userId, err := strconv.Atoi(r.URL.Query().Get("user_id"))
 	if err != nil {
-		h.utils.WriteError(w, err, http.StatusBadRequest)
+		utils.WriteError(w, err, http.StatusBadRequest)
 		return
 	}
 
-	date, err := h.utils.ParseDate(r.URL.Query().Get("date"))
+	date, err := time.Parse(dateFormat, r.URL.Query().Get("date"))
 	if err != nil {
-		h.utils.WriteError(w, err, http.StatusBadRequest)
+		utils.WriteError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	res, err := h.server.GetEventsForDay(r.Context(), userId, date)
 	if err != nil {
-		h.utils.WriteError(w, err, http.StatusInternalServerError)
+		utils.WriteError(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	h.utils.WriteJSON(w, res)
+	utils.WriteJSON(w, res)
 }
 
 func (h *Handler) GetEventsForWeekHandler(w http.ResponseWriter, r *http.Request) {
-	userId, err := h.utils.ParseUserID(r.URL.Query().Get("user_id"))
+	userId, err := strconv.Atoi(r.URL.Query().Get("user_id"))
 	if err != nil {
-		h.utils.WriteError(w, err, http.StatusBadRequest)
+		utils.WriteError(w, err, http.StatusBadRequest)
 		return
 	}
 
-	date, err := h.utils.ParseDate(r.URL.Query().Get("date"))
+	date, err := time.Parse(dateFormat, r.URL.Query().Get("date"))
 	if err != nil {
-		h.utils.WriteError(w, err, http.StatusBadRequest)
+		utils.WriteError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	endDate := date.AddDate(0, 0, 7)
-	res, err := h.server.GetEventsForWeek(r.Context(), userId, date, endDate)
+	res, err := h.server.GetEventsForDates(r.Context(), userId, date, endDate)
 	if err != nil {
-		h.utils.WriteError(w, err, http.StatusInternalServerError)
+		utils.WriteError(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	h.utils.WriteJSON(w, res)
+	utils.WriteJSON(w, res)
 }
 
 func (h *Handler) GetEventsForMonthHandler(w http.ResponseWriter, r *http.Request) {
-	userId, err := h.utils.ParseUserID(r.URL.Query().Get("user_id"))
+	userId, err := strconv.Atoi(r.URL.Query().Get("user_id"))
 	if err != nil {
-		h.utils.WriteError(w, err, http.StatusBadRequest)
+		utils.WriteError(w, err, http.StatusBadRequest)
 		return
 	}
 
-	date, err := h.utils.ParseDate(r.URL.Query().Get("date"))
+	date, err := time.Parse(dateFormat, r.URL.Query().Get("date"))
 	if err != nil {
-		h.utils.WriteError(w, err, http.StatusBadRequest)
+		utils.WriteError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	endDate := date.AddDate(0, 1, 0)
-	res, err := h.server.GetEventsForWeek(r.Context(), userId, date, endDate)
+	res, err := h.server.GetEventsForDates(r.Context(), userId, date, endDate)
 	if err != nil {
-		h.utils.WriteError(w, err, http.StatusInternalServerError)
+		utils.WriteError(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	h.utils.WriteJSON(w, res)
+	utils.WriteJSON(w, res)
 }
 
 func (h *Handler) RemoveEventHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		h.utils.WriteError(w, err, http.StatusBadRequest)
+		utils.WriteError(w, err, http.StatusBadRequest)
 		return
 	}
 
-	date, err := h.utils.ParseDate(r.FormValue("date"))
+	date, err := time.Parse(dateFormat, r.FormValue("date"))
 	if err != nil {
-		h.utils.WriteError(w, err, http.StatusBadRequest)
+		utils.WriteError(w, err, http.StatusBadRequest)
 		return
 	}
 
-	id, err := h.utils.ParseUserID(r.FormValue("id"))
+	id, err := strconv.Atoi(r.FormValue("id"))
 	if err != nil {
-		h.utils.WriteError(w, err, http.StatusBadRequest)
+		utils.WriteError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	if err := h.server.DeleteEvent(r.Context(), date, id); err != nil {
-		h.utils.WriteError(w, err, http.StatusInternalServerError)
+		utils.WriteError(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	h.utils.WriteJSON(w, "Событие удалено")
+	utils.WriteJSON(w, "Событие удалено")
 }
 
 func (h *Handler) UpdateEventHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		h.utils.WriteError(w, err, http.StatusBadRequest)
+		utils.WriteError(w, err, http.StatusBadRequest)
 		return
 	}
 
-	id, err := h.utils.ParseUserID(r.FormValue("id"))
+	id, err := strconv.Atoi(r.FormValue("id"))
 	if err != nil {
-		h.utils.WriteError(w, err, http.StatusBadRequest)
-		return
-	}
-
-	userId, err := h.utils.ParseUserID(r.FormValue("user_id"))
-	if err != nil {
-		h.utils.WriteError(w, err, http.StatusBadRequest)
+		utils.WriteError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	title := r.FormValue("title")
 
-	res, err := h.server.UpdateEvent(r.Context(), id, userId, title)
+	res, err := h.server.UpdateEvent(r.Context(), id, title)
 	if err != nil {
-		h.utils.WriteError(w, err, http.StatusInternalServerError)
+		utils.WriteError(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	h.utils.WriteJSON(w, res)
+	utils.WriteJSON(w, res)
 }

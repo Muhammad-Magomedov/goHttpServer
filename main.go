@@ -4,23 +4,30 @@ import (
 	"context"
 	"event/handler"
 	"event/repo"
-	"event/utils"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	connStr := "postgres://postgres:postgres@localhost:5432/events"
+	err := godotenv.Load("DB_URL")
+	if err != nil {
+		log.Fatal("DB environment variable is not set")
+	}
+	connStr := os.Getenv("DB_URL")
+	if connStr == "" {
+		log.Fatal("DB environment variable is not set")
+	}
 	db, err := pgx.Connect(context.Background(), connStr)
 	if err != nil {
 		log.Fatal("Ошибка подключения к бд", err)
 	}
 
 	server := repo.New(db)
-	utils := utils.New()
-	eventHandler := handler.New(server, utils)
+	eventHandler := handler.New(server)
 
 	http.HandleFunc("/create_event", eventHandler.CreateEventHandler)
 	http.HandleFunc("/events_for_day", eventHandler.GetEventsForDayHandler)
